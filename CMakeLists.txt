@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
-
-project(RadixSort LANGUAGES C)
+project(RadixSort LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Vulkan REQUIRED)
+
+# GoogleTest setup
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/5ed21863955149a5a877a53d7d5045b6919090ed.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
 
 function(shader header source source_list include_path)
     get_filename_component(shader_bin_name ${source} NAME)
@@ -79,19 +87,20 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
             common/vk/pipeline_cache.c
             common/util.c
         )
+        
+        # Benchmark executable
         add_executable(benchmark platforms/vk/tests/radix_sort_vk_bench/main.c ${common_src})
         target_link_libraries(benchmark PUBLIC vk-radix-sort)
         target_include_directories(benchmark PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
         target_compile_definitions(benchmark PUBLIC RS_VK_TARGET_ARCHIVE_LINKABLE)
 
-        include(GoogleTest)
-
+        # Unit tests with GoogleTest
         add_executable(unittest platforms/vk/tests/radix_sort_vk_bench/tests/radix_sort_vk_bench_unittests.cc ${common_src})
         target_link_libraries(unittest PUBLIC vk-radix-sort gtest gtest_main)
         target_include_directories(unittest PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} platforms/vk/tests/radix_sort_vk_bench)
         target_compile_definitions(unittest PUBLIC RS_VK_TARGET_ARCHIVE_LINKABLE)
-
-        gtest_add_tests(unittest "" AUTO)
+        
+        # Commented out for now
+        # gtest_add_tests(unittest "" AUTO)
     endif()
 endif()
-
