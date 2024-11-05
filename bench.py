@@ -1,6 +1,7 @@
 import subprocess
 import re
 
+# just running ./build/benchmark will give you this information
 vendor_id = "10DE"
 device_id = "2786"
 target_name = "nvidia_sm35_u64"
