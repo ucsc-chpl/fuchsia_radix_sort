@@ -636,13 +636,13 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
 
       if (info->is_verbose)
         {
-          fprintf(stdout,
-                  "%c %c %8X : %-8X : %s\n",
-                  is_match ? '*' : ' ',
-                  is_match && info->is_validation ? 'V' : ' ',
-                  tmp.vendorID,
-                  tmp.deviceID,
-                  tmp.deviceName);
+          // fprintf(stdout,
+          //         "%c %c %8X : %-8X : %s\n",
+          //         is_match ? '*' : ' ',
+          //         is_match && info->is_validation ? 'V' : ' ',
+          //         tmp.vendorID,
+          //         tmp.deviceID,
+          //         tmp.deviceName);
         }
 
       if (is_match)
@@ -654,7 +654,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
 
   if (info->is_verbose)
     {
-      fprintf(stdout, "\n");
+      // fprintf(stdout, "\n");
     }
 
   free(pds);
@@ -1368,19 +1368,19 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   // Labels
   //
   fprintf(stdout,
-          "Device, "
-          "Driver, "
-          "Dispatch, "
+          // "Device, "
+          // "Driver, "
+          // "Dispatch, "
           "Keyval, "
-          "Verified?, "
-          "Count, "
-          "CPU, "
-          "Algo, "
-          "Usecs, "
-          "Mkeys/s, "
-          "GPU, "
-          "Warmup, "
-          "Trials, ");
+          // "Verified?, "
+          // "Count, "
+          // "CPU, "
+          // "Algo, "
+          "Ms, ");
+          // "Mkeys/s, "
+          // "GPU, "
+          // "Warmup, "
+          // "Trials, ");
 
   //
   // Accumulate verifications
@@ -1606,10 +1606,10 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
             {
               for (uint32_t ii = 0; ii < ext_timestamps.timestamps_set - 1; ii++)
                 {
-                  fprintf(stdout, "Min Split Usecs, ");
+                  // fprintf(stdout, "Min Split Usecs, ");
                 }
 
-              fprintf(stdout, "Min Elapsed Usecs, ");
+              // fprintf(stdout, "Min Elapsed Usecs, ");
             }
 
           fprintf(stdout, "Max Mkeys/s\n");
@@ -1762,23 +1762,25 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       //
       // timestamps are in nanoseconds
       //
-      fprintf(stdout,
-              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, %9u, ",
-              pdp.deviceName,
-              VK_API_VERSION_VARIANT(pdp.driverVersion),
-              VK_API_VERSION_MAJOR(pdp.driverVersion),
-              VK_API_VERSION_MINOR(pdp.driverVersion),
-              VK_API_VERSION_PATCH(pdp.driverVersion),
-              info->is_indirect ? "indirect" : "direct",
-              (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
-              info->is_verify ? (verified ? "    OK" : "*FAIL*") : "UNVERIFIED",
-              count,
-              // CPU
-              info->is_verify ? cpu_algo : "UNVERIFIED",
-              info->is_verify ? (cpu_ns / 1e3) : 0.0,             // usecs
-              info->is_verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
-              info->warmup,
-              info->loops);
+
+      // fprintf(stdout,
+      //         "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, %9u, ",
+      //         pdp.deviceName,
+      //         VK_API_VERSION_VARIANT(pdp.driverVersion),
+      //         VK_API_VERSION_MAJOR(pdp.driverVersion),
+      //         VK_API_VERSION_MINOR(pdp.driverVersion),
+      //         VK_API_VERSION_PATCH(pdp.driverVersion),
+      //         info->is_indirect ? "indirect" : "direct",
+      //         (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
+      //         info->is_verify ? (verified ? "    OK" : "*FAIL*") : "UNVERIFIED",
+      //         count,
+      //         // CPU
+      //         info->is_verify ? cpu_algo : "UNVERIFIED",
+      //         info->is_verify ? (cpu_ns / 1e3) : 0.0,             // usecs
+      //         info->is_verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
+      //         info->warmup,
+      //         info->loops);
+      // fprintf(stdout, "%7.2f\n", 1000.0 * (count / (cpu_ns)));
 
       {
         double elapsed_ns_min_f64;
@@ -1787,10 +1789,10 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
           {
             elapsed_ns_min_f64 = (double)elapsed_min[ii] * vk_timestamp_period;
 
-            fprintf(stdout, "%12.3f, ", elapsed_ns_min_f64 / 1e3);
+            // fprintf(stdout, "%12.3f, ", elapsed_ns_min_f64 / 1e3);
           }
 
-        fprintf(stdout, "%7.2f\n", 1000.0 * count / elapsed_ns_min_f64);
+        fprintf(stdout, "%u,%12.3f,%7.2f\n", count, (elapsed_ns_min_f64 / 1e9), 1e6 * count / (elapsed_ns_min_f64 / 1e9));
       }
 
       //
