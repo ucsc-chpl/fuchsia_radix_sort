@@ -5,11 +5,14 @@
 //
 //
 //
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cinttypes>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <chrono> 
+#include <cmath>
 
 //
 //
@@ -65,30 +68,30 @@
 //
 //
 //
-char const *
-cpu_sort_u32(uint32_t * a, uint32_t count, double * cpu_ns);
-char const *
-cpu_sort_u64(uint64_t * a, uint32_t count, double * cpu_ns);
+// char const *
+// cpu_sort_u32(uint32_t * a, uint32_t count, double * cpu_ns);
+// char const *
+// cpu_sort_u64(uint64_t * a, uint32_t count, double * cpu_ns);
 
-//
-//
-//
-static char const *
-cpu_sort(void * sorted_h, uint32_t const rs_dwords, uint32_t const count, double * const cpu_ns)
-{
-  char const * algo;
+// //
+// //
+// //
+// static char const *
+// cpu_sort(void * sorted_h, uint32_t const rs_dwords, uint32_t const count, double * const cpu_ns)
+// {
+//   char const * algo;
 
-  if (rs_dwords == 1)
-    {
-      algo = cpu_sort_u32(sorted_h, count, cpu_ns);
-    }
-  else
-    {
-      algo = cpu_sort_u64(sorted_h, count, cpu_ns);
-    }
+//   if (rs_dwords == 1)
+//     {
+//       algo = cpu_sort_u32(static_cast<uint32_t*>(sorted_h), count, cpu_ns);
+//     }
+//   else
+//     {
+//       algo = cpu_sort_u64(static_cast<uint64_t*>(sorted_h), count, cpu_ns);
+//     }
 
-  return algo;
-}
+//   return algo;
+// }
 
 //
 //
@@ -596,7 +599,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       return EXIT_FAILURE;
     }
 
-  VkPhysicalDevice * pds = MALLOC_MACRO(pd_count * sizeof(*pds));
+  VkPhysicalDevice * pds = (VkPhysicalDevice*)MALLOC_MACRO(pd_count * sizeof(*pds));
 
   vk(EnumeratePhysicalDevices(instance, &pd_count, pds));
 
@@ -1302,7 +1305,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   void * rand_h = MALLOC_MACRO(rs_mr.keyvals_size);
   void * sort_h = MALLOC_MACRO(rs_mr.keyvals_size);
 
-  rs_fill_rand(rand_h, info->count_hi, keyval_dwords);
+  rs_fill_rand(static_cast<uint32_t*>(rand_h), info->count_hi, keyval_dwords);
 
   void * rand_map;
 
@@ -1367,20 +1370,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   //
   // Labels
   //
-  fprintf(stdout,
-          // "Device, "
-          // "Driver, "
-          // "Dispatch, "
-          "Keyval, "
-          // "Verified?, "
-          // "Count, "
-          // "CPU, "
-          // "Algo, "
-          "Ms, ");
-          // "Mkeys/s, "
-          // "GPU, "
-          // "Warmup, "
-          // "Trials, ");
+  fprintf(stdout, "Keyval, Ms, ");
 
   //
   // Accumulate verifications
@@ -1406,7 +1396,10 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       //
       // Init elapsed time accumulators
       //
-      uint64_t elapsed_min[QUERY_POOL_SIZE_MAX] = { [0 ... QUERY_POOL_SIZE_MAX - 1] = UINT64_MAX };
+      uint64_t elapsed_min[QUERY_POOL_SIZE_MAX];
+      for (int i = 0; i < QUERY_POOL_SIZE_MAX; ++i) {
+          elapsed_min[i] = UINT64_MAX;
+      }
       uint64_t elapsed_max[QUERY_POOL_SIZE_MAX] = { 0 };
       uint64_t elapsed_sum[QUERY_POOL_SIZE_MAX] = { 0 };
 
@@ -1533,87 +1526,41 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       //
       uint32_t const total_loops = info->warmup + info->loops;
 
+      float total_time = 0;
+
       for (uint32_t loop_idx = 0; loop_idx < total_loops; loop_idx++)
         {
-          // submit rand copy and wait
+          float time = 0;
           vk(QueueSubmit(queue, 1, &submit_info_cb_rand_copy, VK_NULL_HANDLE));
-
-          // wait for queue to drain
           vk(QueueWaitIdle(queue));
 
-          // submit radix sort and wait
+          auto start = std::chrono::steady_clock::now();
           vk(QueueSubmit(queue, 1, &submit_info_cb, VK_NULL_HANDLE));
-
-          // wait for queue to drain
           vk(QueueWaitIdle(queue));
+          auto stop = std::chrono::steady_clock::now();
 
-          //
-          // read timestamps
-          //
+          std::chrono::duration<float, std::milli> duration = stop - start;
+          time = duration.count(); 
+          // fprintf(stdout, "%.5f\n", time);
+
           if (loop_idx >= info->warmup)
             {
-              uint64_t timestamps[QUERY_POOL_SIZE_MAX];
-
-              vk(GetQueryPoolResults(device,
-                                     query_pool,
-                                     0,
-                                     ext_timestamps.timestamps_set,
-                                     sizeof(timestamps),
-                                     timestamps,
-                                     sizeof(timestamps[0]),
-                                     VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
-
-              //
-              // there are either 0 timestamps or at least 2 timestamps
-              //
-              if (ext_timestamps.timestamps_set > 0)
-                {
-                  // split times
-                  for (uint32_t jj = 0; jj < ext_timestamps.timestamps_set - 1; jj++)
-                    {
-                      uint64_t const t = timestamps[jj + 1] - timestamps[jj];
-
-                      elapsed_min[jj] = MIN_MACRO(uint64_t, elapsed_min[jj], t);
-                      elapsed_max[jj] = MAX_MACRO(uint64_t, elapsed_max[jj], t);
-                      elapsed_sum[jj] += t;
-                    }
-
-                  // total time
-                  {
-                    uint32_t const last = ext_timestamps.timestamps_set - 1;
-                    uint64_t const t    = timestamps[last] - timestamps[0];
-
-                    elapsed_min[last] = MIN_MACRO(uint64_t, elapsed_min[last], t);
-                    elapsed_max[last] = MAX_MACRO(uint64_t, elapsed_max[last], t);
-                    elapsed_sum[last] += t;
-                  }
-                }
+              total_time += time;
             }
         }
+      float avg_time = total_time / info->loops;
+      float avg_mkeys = count / avg_time / 1000;
+
 
       vk(ResetCommandBuffer(cb_rand_copy, 0));
       vk(ResetCommandBuffer(cb, 0));
 
-      //
-      // timestamp labels
-      //
       if (count == info->count_lo)
         {
-          //
-          // there are either 0 timestamps or at least 2 timestamps
-          //
-          if (ext_timestamps.timestamps_set > 0)
-            {
-              for (uint32_t ii = 0; ii < ext_timestamps.timestamps_set - 1; ii++)
-                {
-                  // fprintf(stdout, "Min Split Usecs, ");
-                }
-
-              // fprintf(stdout, "Min Elapsed Usecs, ");
-            }
-
           fprintf(stdout, "Max Mkeys/s\n");
         }
+      
+      fprintf(stdout, "%u,%.5f,%7.2f\n", count, avg_time, avg_mkeys);
 
       //
       // copy the results back and, optionally, verify them
@@ -1695,17 +1642,17 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
           uint32_t     cpu_loops  = RS_BENCH_LOOPS_CPU;
           size_t const count_size = rs_mr.keyval_size * count;
 
-          while (cpu_loops-- > 0)  // run the cpu_algo N times and measure last
-            {
-              // copy random data
-              memcpy(sort_h, rand_h, count_size);
+          // while (cpu_loops-- > 0)  // run the cpu_algo N times and measure last
+          //   {
+          //     // copy random data
+          //     memcpy(sort_h, rand_h, count_size);
 
-              // sort on the cpu
-              cpu_algo = cpu_sort(sort_h,  //
-                                  keyval_dwords,
-                                  count,
-                                  &cpu_ns);
-            }
+          //     // sort on the cpu
+          //     cpu_algo = cpu_sort(sort_h,  //
+          //                         keyval_dwords,
+          //                         count,
+          //                         &cpu_ns);
+          //   }
 
           //
           // verify
@@ -1758,42 +1705,6 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       // any verification failures?
       //
       all_verified = all_verified && verified;
-
-      //
-      // timestamps are in nanoseconds
-      //
-
-      // fprintf(stdout,
-      //         "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, %9u, ",
-      //         pdp.deviceName,
-      //         VK_API_VERSION_VARIANT(pdp.driverVersion),
-      //         VK_API_VERSION_MAJOR(pdp.driverVersion),
-      //         VK_API_VERSION_MINOR(pdp.driverVersion),
-      //         VK_API_VERSION_PATCH(pdp.driverVersion),
-      //         info->is_indirect ? "indirect" : "direct",
-      //         (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
-      //         info->is_verify ? (verified ? "    OK" : "*FAIL*") : "UNVERIFIED",
-      //         count,
-      //         // CPU
-      //         info->is_verify ? cpu_algo : "UNVERIFIED",
-      //         info->is_verify ? (cpu_ns / 1e3) : 0.0,             // usecs
-      //         info->is_verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
-      //         info->warmup,
-      //         info->loops);
-      // fprintf(stdout, "%7.2f\n", 1000.0 * (count / (cpu_ns)));
-
-      {
-        double elapsed_ns_min_f64;
-
-        for (uint32_t ii = 0; ii < ext_timestamps.timestamps_set; ii++)
-          {
-            elapsed_ns_min_f64 = (double)elapsed_min[ii] * vk_timestamp_period;
-
-            // fprintf(stdout, "%12.3f, ", elapsed_ns_min_f64 / 1e3);
-          }
-
-        fprintf(stdout, "%u,%12.3f,%7.2f\n", count, (elapsed_ns_min_f64 / 1e9), 1e6 * count / (elapsed_ns_min_f64 / 1e9));
-      }
 
       //
       // make each trial visible ASAP...

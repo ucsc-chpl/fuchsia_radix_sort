@@ -78,7 +78,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         enable_language(CXX)
         set(common_src
             platforms/vk/tests/radix_sort_vk_bench/cpu_sort.cc
-            platforms/vk/tests/radix_sort_vk_bench/radix_sort_vk_bench.c
+            platforms/vk/tests/radix_sort_vk_bench/radix_sort_vk_bench.cpp
             platforms/vk/tests/radix_sort_vk_bench/find_target_name.c
             common/vk/assert.c
             common/vk/barrier.c

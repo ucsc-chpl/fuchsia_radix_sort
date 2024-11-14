@@ -9,8 +9,8 @@ sort_type = "direct"
 current_count = 131072
 end_count = 8388608
 step_count = 131072
-iterations = 128
-warmup = 8
+iterations = 8#128
+warmup = 8#8
 
 command = [
         "./build/benchmark",
