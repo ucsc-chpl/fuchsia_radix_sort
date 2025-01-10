@@ -3,7 +3,7 @@ import os
 import struct
 
 def generate_c_header(input_file, output_file, symbol_name):
-    symbol_name = f"{symbol_name}_comp_shader_binary"
+    symbol_name = f"{symbol_name}_shader_binary"
     with open(input_file, "rb") as f:
         data = f.read()
     with open(output_file, "w") as f:

@@ -15,39 +15,15 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 function(shader header source source_list include_path)
-    get_filename_component(shader_name ${source} NAME_WE)
-    set(shader_spv ${CMAKE_CURRENT_BINARY_DIR}/${shader_name}.spv)
-    set(shader_spv_opt ${CMAKE_CURRENT_BINARY_DIR}/${shader_name}_opt.spv)
-    set(symbol_name ${shader_name})
-
-    # generate binary
-    if (NOT TARGET_GENERATED_${shader_spv})
-        add_custom_command(
-            OUTPUT ${shader_spv}
-            COMMAND glslangValidator --target-env vulkan1.2 ${CMAKE_CURRENT_SOURCE_DIR}/${source} -o ${shader_spv} -I${include_path}
-            MAIN_DEPENDENCY ${source}
-            DEPENDS ${source}
-            VERBATIM
-        )
-        set(TARGET_GENERATED_${shader_spv} TRUE PARENT_SCOPE)
-    endif()
-
-    # reduce shader size thru spirv-opt
-    if (NOT TARGET_GENERATED_${shader_spv_opt})
-        add_custom_command(
-            OUTPUT ${shader_spv_opt}
-            COMMAND spirv-opt ${shader_spv} -Os -o ${shader_spv_opt}
-            DEPENDS ${shader_spv}
-            VERBATIM
-        )
-        set(TARGET_GENERATED_${shader_spv_opt} TRUE PARENT_SCOPE)
-    endif()
-
-    # generate C header
+    get_filename_component(shader_bin_name ${source} NAME)
+    string(REPLACE "\." "_" shader_bin_name ${shader_bin_name})
     add_custom_command(
         OUTPUT ${header}
-        COMMAND ${CMAKE_COMMAND} -E env python3 ${CMAKE_SOURCE_DIR}/generate_c_header.py ${shader_spv_opt} ${header} ${symbol_name}
-        DEPENDS ${shader_spv_opt}
+        COMMAND glslc --target-env=vulkan1.2 ${CMAKE_CURRENT_SOURCE_DIR}/${source} -o ${CMAKE_CURRENT_BINARY_DIR}/${shader_bin_name}.spv -I${include_path} -Os
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PYTHONPATH} python3 ${CMAKE_CURRENT_SOURCE_DIR}/generate_c_header.py ${CMAKE_CURRENT_BINARY_DIR}/${shader_bin_name}.spv ${CMAKE_CURRENT_BINARY_DIR}/${header} ${shader_bin_name}
+        MAIN_DEPENDENCY ${source}
+        DEPENDS ${source}
+        IMPLICIT_DEPENDS C ${source}
         VERBATIM
     )
     set(${source_list} ${${source_list}} ${header} PARENT_SCOPE)

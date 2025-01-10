@@ -1560,11 +1560,9 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
           fprintf(stdout, "Max Mkeys/s\n");
         }
       
-      fprintf(stdout, "%u,%.5f,%7.2f\n", count, avg_time, avg_mkeys);
+      //fprintf(stdout, "%u,%.5f,%7.2f\n", count, avg_time, avg_mkeys);
+      fprintf(stdout, "(%u, %7.2f)\n", count, avg_mkeys);
 
-      //
-      // copy the results back and, optionally, verify them
-      //
       char const * cpu_algo = NULL;
       double       cpu_ns   = 0.0;
       bool         verified = true;
